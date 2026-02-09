@@ -1,4 +1,6 @@
 import re
+import os
+import shutil
 
 from leafnode import LeafNode
 from textnode import TextNode, TextType
@@ -383,3 +385,117 @@ def markdown_to_html_node(markdown):
         html_children.append(html_node)
 
     return outer_parent
+
+###################################################################
+# Function: extract_title - extract title from markdown string    #
+# Input:    markdown - markdown string                            #
+# Return:   title text                                            #
+###################################################################
+def extract_title(markdown):
+    lines = markdown.split('\n')
+    title = ""
+    for line in lines:
+        if line.startswith("# "):
+            title = line[2:]
+            break
+
+    if title == "":
+        raise ValueError("Invalid markdown, no title heading!")
+
+    return title
+
+###################################################################
+# Function: copy_dir - copies contents from source directory into #
+#                      destination directory                      #
+# Input:    src  - source directory                               #
+#           dest - destination directory                          #
+# Return:                                                         #
+###################################################################
+def copy_dir(src, dest):
+    src_path = os.path.abspath(src)
+    dest_path = os.path.abspath(dest)
+
+    print("Current working dir:", os.getcwd())
+    print("Src path:", src_path)
+    if not os.path.exists(src_path) or not os.path.isdir(src_path):
+        raise ValueError("Invalid path for src directory")
+
+    print("Dest path:", dest_path)
+    if not os.path.exists(dest_path) or not os.path.isdir(dest_path):
+        raise ValueError("Invalid path for dest directory")
+
+    # first delete dest directory and recreate it
+    print("Clearing destination directory...")
+    shutil.rmtree(dest_path)
+    os.mkdir(dest_path)
+
+    # get files and directories from source
+    src_contents = os.listdir(src_path)
+
+    for content in src_contents:
+        src_sub_path = os.path.join(src_path, content)
+        if os.path.isfile(src_sub_path):
+            # just copy files into dest dir as is
+            print("Copy file \"", src_sub_path, "\" to \"", dest_path, "\"")
+            shutil.copy(src_sub_path, dest_path)
+        else:
+            # create new directory in destination and recursivly call copy on that dir
+            dest_sub_path = os.path.join(dest_path, content)
+            os.mkdir(dest_sub_path)
+            print("Copy directory \"", src_sub_path, "\" to directory \"", dest_sub_path, "\"")
+            copy_dir(src_sub_path, dest_sub_path)
+
+####################################################################
+# Function: generate_page -  generate html page from markdown file #
+# Input:    from_path     - source path                            #
+#           template_path - template path                          #
+#           dest_path     - dest path                              #
+# Return:                                                          #
+####################################################################
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+
+    src = os.path.abspath(from_path)
+    dest = os.path.abspath(dest_path)
+    template = os.path.abspath(template_path)
+
+    with open(src) as f:
+        markdown = f.read()
+
+    with open(template) as f:
+        html_template = f.read()
+
+    html_node = markdown_to_html_node(markdown)
+    html_title = extract_title(markdown)
+    html_body = html_node.to_html()
+
+    html_content = html_template.replace("{{ Title }}", html_title)
+    html_content = html_content.replace("{{ Content }}", html_body)
+
+    dir_name = os.path.dirname(dest)
+    os.makedirs(dir_name, exist_ok=True)
+    with open(dest, "w") as f:
+        f.write(html_content)
+
+#########################################################################
+# Function: generate_pages_recursive - generate html from nested        #
+#                                      markdown directories             #
+# Input:    dir_path_content - directory with children to generate from #
+#           template_path    - template path                            #
+#           dest_dir_path    - destination directory to generate to     #
+# Return:                                                               #
+#########################################################################
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+    content_path = os.path.abspath(dir_path_content)
+    dest_path = os.path.abspath(dest_dir_path)
+
+    contents = os.listdir(content_path)
+    for content in contents:
+        sub_path = os.path.join(content_path, content)
+        dest_sub_path = os.path.join(dest_path, content)
+        if os.path.isfile(sub_path):
+            # handle file case
+            if content.endswith(".md"):
+                generate_page(sub_path, template_path, dest_sub_path.replace(".md", ".html"))
+        else:
+            generate_pages_recursive(sub_path, template_path, dest_sub_path)

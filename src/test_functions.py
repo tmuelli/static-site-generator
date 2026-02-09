@@ -10,7 +10,8 @@ from functions import (
     text_to_textnodes,
     markdown_to_blocks,
     block_to_block_type,
-    markdown_to_html_node
+    markdown_to_html_node,
+    extract_title
 )
 from textnode import TextNode, TextType
 from blocktype import BlockType
@@ -246,3 +247,13 @@ the **same** even with inline stuff
             html,
             "<div><pre><code>This is text that _should_ remain\nthe **same** even with inline stuff\n</code></pre></div>",
         )
+
+    def test_extract_title(self):
+        md = """
+# Heading Title at Level 1
+
+Other stuff here and there.
+Paragraphs bla bla bla.
+"""
+        title = extract_title(md)
+        self.assertEqual(title, "Heading Title at Level 1")
