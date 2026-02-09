@@ -445,14 +445,15 @@ def copy_dir(src, dest):
             print("Copy directory \"", src_sub_path, "\" to directory \"", dest_sub_path, "\"")
             copy_dir(src_sub_path, dest_sub_path)
 
-####################################################################
-# Function: generate_page -  generate html page from markdown file #
-# Input:    from_path     - source path                            #
-#           template_path - template path                          #
-#           dest_path     - dest path                              #
-# Return:                                                          #
-####################################################################
-def generate_page(from_path, template_path, dest_path):
+##########################################################################
+# Function: generate_page -  generate html page from markdown file       #
+# Input:    from_path     - source path                                  #
+#           template_path - template path                                #
+#           dest_path     - dest path                                    #
+#           basepath         - path to the root directory of the project #
+# Return:                                                                #
+##########################################################################
+def generate_page(from_path, template_path, dest_path, basepath):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
 
     src = os.path.abspath(from_path)
@@ -472,20 +473,24 @@ def generate_page(from_path, template_path, dest_path):
     html_content = html_template.replace("{{ Title }}", html_title)
     html_content = html_content.replace("{{ Content }}", html_body)
 
+    html_content = html_content.replace("href=\"\/", f"href=\"{basepath}")
+    html_content = html_content.replace("src=\"\/", f"src=\"{basepath}")
+
     dir_name = os.path.dirname(dest)
     os.makedirs(dir_name, exist_ok=True)
     with open(dest, "w") as f:
         f.write(html_content)
 
-#########################################################################
-# Function: generate_pages_recursive - generate html from nested        #
-#                                      markdown directories             #
-# Input:    dir_path_content - directory with children to generate from #
-#           template_path    - template path                            #
-#           dest_dir_path    - destination directory to generate to     #
-# Return:                                                               #
-#########################################################################
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+##########################################################################
+# Function: generate_pages_recursive - generate html from nested         #
+#                                      markdown directories              #
+# Input:    dir_path_content - directory with children to generate from  #
+#           template_path    - template path                             #
+#           dest_dir_path    - destination directory to generate to      #
+#           basepath         - path to the root directory of the project #
+# Return:                                                                #
+##########################################################################
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, basepath):
     content_path = os.path.abspath(dir_path_content)
     dest_path = os.path.abspath(dest_dir_path)
 
@@ -496,6 +501,6 @@ def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
         if os.path.isfile(sub_path):
             # handle file case
             if content.endswith(".md"):
-                generate_page(sub_path, template_path, dest_sub_path.replace(".md", ".html"))
+                generate_page(sub_path, template_path, dest_sub_path.replace(".md", ".html"), basepath)
         else:
-            generate_pages_recursive(sub_path, template_path, dest_sub_path)
+            generate_pages_recursive(sub_path, template_path, dest_sub_path, basepath)
